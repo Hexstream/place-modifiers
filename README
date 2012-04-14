@@ -1,0 +1,10 @@
+Project's home: http://www.hexstreamsoft.com/projects/place-modifiers/
+
+
+Gives access to many place-modifiers (essentially modify-macros)
+with a single symbol: MODIFY.
+
+
+
+This library is in the Public Domain.
+See the UNLICENSE file for details.
