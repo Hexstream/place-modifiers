@@ -6,8 +6,11 @@
   :license "Public Domain"
 
   :description "Gives access to many place-modifiers (essentially modify-macros) with a single symbol: MODIFY."
-  
+
+  :depends-on (map-bind)
+
   :version "0.1"
   :serial cl:t
   :components ((:file "package")
-	       (:file "main")))
+	       (:file "main")
+               (:file "definitions")))
