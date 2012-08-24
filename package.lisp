@@ -6,7 +6,7 @@
 
            #:info
            #:name
-           #:place-index
+           #:spot-index
            #:locate
            #:ensure
            #:define))
