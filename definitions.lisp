@@ -5,95 +5,74 @@
 		      `(place-modifier:define ,def))
 		    defs)))
 
-(%d * (* *)
-    + (+ *)
-    - (- *)
-    / (/ *)
-    /= (/= *)
-    1+ 1-
-    < (< *)
-    <= (<= *)
-    = (= *)
-    > (> *)
-    >= (>= *)
-    abs
-    (acons 3)
-    acos acosh
-    (adjoin 2)
-    adjust-array
-    adjustable-array-p
-    allocate-instance
-    alpha-char-p
-    alphanumericp
-    and (and *)
-    or (or *)
-    (append -1) ((append *) 1)
-    (nconc -1) ((nconc *) 1)
-    (apply 2) (apply *)
-    apropos-list
-    aref ((aref *) 2) ; caution
-    svref (svref *)
-    arithmetic-error-operands
-    arithmetic-error-operation
-    array-dimension (array-dimension *)
-    array-dimensions
-    array-displacement
-    array-element-type
-    array-has-fill-pointer-p
-    array-in-bounds-p
-    array-rank
-    array-row-major-index
-    array-total-size
-    arrayp
-    ash (ash *)
-    asin asinh
-    (assoc 2) (assoc-if 2) (assoc-if-not 2)
-    ((assoc *) 1) ((assoc-if *) 1) ((assoc-if-not *) 1)
-    atan ((atan *) 2) atanh
-    atom
-    bit ((bit *) 2) sbit ((sbit *) 2); caution
-    )
-
-(macrolet ((d (&rest function-names)
-	     `(progn ,@(mapcar (lambda (name)
-                                 `(%d ,name
-                                      ((,name *) 2)))
-                               function-names))))
-  (d bit-and
-     bit-andc1
-     bit-andc2
-     bit-eqv
-     bit-ior
-     bit-nand
-     bit-nor
-     bit-not
-     bit-orc1
-     bit-orc2
-     bit-xor))
-
-(%d bit-vector-p
-    (boole 2) (boole *))
+(%d ((* + - /) t (1 -1))
+    ((1+ 1-) t)
+    ((< <= = /= > >=) t (1 -1))
+    (abs t)
+    (acons t (3 1 2))
+    ((acos acosh) t)
+    (adjoin t (2 1))
+    (adjust-array t (1 2))
+    (adjustable-array-p nil)
+    (allocate-instance t)
+    (alpha-char-p t)
+    (alphanumericp 1)
+    ((and or) t (1 -1))
+    ((append nconc) t (-1 1))
+    (apply nil (-1 2 1))
+    (apropos-list t (1 2))
+    (aref nil (1 2 -1))
+    (svref nil (1 2))
+    ((arithmetic-error-operands arithmetic-error-operation) nil)
+    (array-dimension nil (1 2))
+    (array-dimensions nil)
+    ; array-displacement
+    ((array-element-type
+      array-has-fill-pointer-p
+      array-in-bounds-p
+      array-rank)
+     nil)
+    (array-row-major-index nil (1 2 -1))
+    (array-total-size nil)
+    (arrayp t)
+    (ash t (1 2))
+    ((asin asinh) t)
+    ((assoc assoc-if assoc-if-not) nil (2 1))
+    (atan t (1 2)) (atanh t 1)
+    (atom t)
+    ((bit sbit) nil (1 2 -1))
+    ((bit-and
+      bit-andc1
+      bit-andc2
+      bit-eqv
+      bit-ior
+      bit-nand
+      bit-nor
+      bit-orc1
+      bit-orc2
+      bit-xor)
+     t (1 2 3))
+    (bit-not t (1 2))
+    (bit-vector-p t)
+    (boole t (2 3 1)))
 
 #+nil(define-modify-macro (modify boolean) (&place generalized-boolean) ; caution
        (lambda (generalized-boolean)
          (if generalized-boolean t nil)))
 
-(%d both-case-p
-    boundp
-    broadcast-stream-streams
-    butlast
-    nbutlast
-    byte (byte *)
+(%d ((both-case-p lower-case-p upper-case-p) t)
+    (boundp nil)
+    (broadcast-stream-streams nil)
+    ((butlast nbutlast) nil (1 2))
+    (byte t (1 2))
     byte-position
     byte-size
-
-    car cdr caar cadr cdar cddr
-    caaar caadr cadar caddr cdaar cdadr cddar cdddr
-    caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
-    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr
-
-    first second third fourth fifth
-    sixth seventh eighth ninth tenth
+    ((car cdr caar cadr cdar cddr caaar caadr cadar caddr cdaar cdadr cddar cdddr
+          caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
+          cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr)
+     nil)
+    ((first second third fourth fifth sixth seventh eighth ninth tenth)
+     nil)
 
     ;(macro case) (macro ccase) (macro ecase)
     ;(macro typecase) (macro ctypecase) (macro etypecase)
@@ -299,7 +278,6 @@
     logorc2
     logtest (logtest *)
     logxor (logxor *)
-    lower-case-p
     macro-function
     macroexpand
     macroexpand-1
@@ -504,7 +482,6 @@
     ;when todo
     upgraded-array-element-type
     upgraded-complex-part-type
-    upper-case-p
     user-homedir-pathname
     vector (vector *)
     vector-pop
