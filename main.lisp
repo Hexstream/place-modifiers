@@ -2,11 +2,6 @@
 
 (defvar *infos* (make-hash-table :test 'eq))
 
-(deftype place-modifier:name ()
-  '(or
-    (and (not null) symbol)
-    (cons (and (not null) symbol) (cons (eql *) null))))
-
 (defgeneric place-modifier:name (object))
 (defgeneric place-modifier:inconceivable-place-p (object))
 (defgeneric place-modifier:spot-indexes (object &optional format))
@@ -97,7 +92,7 @@
       (setf (gethash name *infos*) new))))
 
 (defmacro place-modifier:define ((&key (spot-indexes-format :human))
-                                 &rest definitions)
+                                 &body definitions)
   `(progn
      ,@(map-bind (mapcar) ((definition definitions))
          (destructuring-bind (names inconceivable-place-p
