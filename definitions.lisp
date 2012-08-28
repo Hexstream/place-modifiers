@@ -25,7 +25,7 @@
   (funcall nil (2 -1 1))
   (apropos-list t (1 2))
   (aref nil (1 2 -1))
-  ((elt svref) nil (1 2))
+  ((elt svref row-major-aref) nil (1 2))
   ((arithmetic-error-operands arithmetic-error-operation) nil)
   (array-dimension nil (1 2))
   (array-dimensions nil)
@@ -39,8 +39,8 @@
   (array-total-size nil)
   (arrayp t)
   (ash t (1 2))
-  ((assoc assoc-if assoc-if-not) nil (2 1))
-  (atan t (1 2)) (atanh t 1)
+  ((assoc assoc-if assoc-if-not rassoc rassoc-if rassoc-if-not)
+   nil (2 1))
   (atom t)
   ((bit sbit) nil (1 2 -1))
   ((bit-and
@@ -69,15 +69,16 @@
   ((butlast nbutlast) nil (1 2))
   (byte t (1 2))
   ((byte-position byte-size) nil)
-  ((car cdr caar cadr cdar cddr caaar caadr cadar caddr cdaar cdadr cddar cdddr
+  ((car cdr caar cadr cdar cddr
+        caaar caadr cadar caddr cdaar cdadr cddar cdddr
         caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
         cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr)
    nil)
   ((first second third fourth fifth sixth seventh eighth ninth tenth)
    nil)
-
-  ((case ccase ecase typecase ctypecase etypecase)
-   t)
+  ;; Todo: Leave as-is without writeback when empty body.
+  #+nil((case ccase ecase typecase ctypecase etypecase)
+        t)
 
   ((ceiling fceiling floor ffloor round fround truncate ftruncate)
    t (1 2)) ; Ignore second return value.
@@ -91,7 +92,7 @@
    t (1 -1))
   ((character characterp) t)
   (class-name t)
-  (class-of nil)
+  ((class-of type-of) nil)
   (close t (1 2))
   (coerce t (1 2)))
 
@@ -129,7 +130,7 @@
     copy-symbol ; Omit pointless secondary variant.
     copy-tree)
    t)
-  ; copy-readtable (todo)
+  ;; copy-readtable (todo)
 
   ((find find-if find-if-not
          member member-if member-if-not
@@ -139,8 +140,8 @@
          count count-if count-if-not)
    t (2 1))
 
-  ; decode-float (3 return values)
-  ; (decode-universal-time t) (many return values)
+  ;; decode-float (3 return values)
+  ;; (decode-universal-time t) (many return values)
 
   ((delete-duplicates remove-duplicates) t)
 
@@ -156,7 +157,7 @@
   (documentation nil (1 2))
   ((echo-stream-input-stream echo-stream-output-stream) nil)
   (endp t)
-  ; (ensure-directories-exist t)
+  ;; (ensure-directories-exist t)
   (ensure-generic-function t)
   ((eq eql equal equalp) t (1 2))
   ((evenp oddp) t)
@@ -167,7 +168,7 @@
   (fdefinition nil)
   ((file-author file-write-date file-length) nil)
   (file-error-pathname nil)
-  ; file-position (Somewhat problematic)
+  ;; file-position (Somewhat problematic)
   (file-string-length nil (2 1))
   (fill-pointer nil)
   (find-all-symbols t)
@@ -189,12 +190,12 @@
   (get nil (1 2))
   (get-macro-character nil (1 2))
   (get-output-stream-string t)
-  ; (get-properties t) (3 return values)
-  ; get-setf-expansion (5 return values)
+  ;; (get-properties t) (3 return values)
+  ;; get-setf-expansion (5 return values)
   (getf nil (1 2 3))
   (gethash nil (2 1 3)) ; Ignore second return value.
   (graphic-char-p nil)
-  ; handler-case
+  ;; handler-case
   ((hash-table-count hash-table-p) t)
   ((hash-table-rehash-size
     hash-table-rehash-threshold
@@ -205,11 +206,11 @@
   ((realpart imagpart) nil)
   (phase t)
   ((input-stream-p output-stream-p) t)
-  ; (integer-decode-float t) (3 return values)
+  ;; (integer-decode-float t) (3 return values)
   (integer-length t)
   (integerp t)
   (interactive-stream-p t)
-  ((intersection set-difference set-exclusive-or union
+  ((intersection set-difference set-exclusive-or union subsetp
                  nintersection nset-difference nset-exclusive-or nunion)
    t (1 2))
   (invoke-restart t (1 2 -1)) ; Ignore all but first return value.
@@ -220,7 +221,7 @@
   ((ldb ldb-test mask-field) nil (2 1))
   (ldiff t (1 2))
   ((length list-length) t)
-  (list t (1 -1))
+  ((list vector) t (1 -1))
   (listen t)
   (listp t)
   (load t)
@@ -262,19 +263,21 @@
   ((minusp plusp zerop) t)
   (mismatch t (1 2))
   ((mod rem) t (1 2))
-  ; multiple-value-call (?...)
+  ;; multiple-value-call (?...)
   (name-char t)
-  ; no-applicable-method no-next-method
-  ; ((nreconc revappend) t ?)
+  ;; no-applicable-method no-next-method
+  ;; ((nreconc revappend) t ?)
   ((reverse nreverse) t)
   ((string-capitalize string-downcase string-upcase
                       nstring-capitalize nstring-downcase nstring-upcase)
    t)
-  (nsublis 2) ((nsublis *) 1)
-  (nsubst 3) (nsubst-if 3) (nsubst-if-not 3)
-  (nsubstitute 3) (nsubstitute-if 3) (nsubstitute-if-not 3)
-  (nth 2) ((nth *) 1)
-  (nthcdr 2) ((nthcdr *) 1)
+  ((sublis nsublis) t (2 1))
+  ;; Hard to tell if secondary variant should use first or second arg. Refrain.
+  ((subst subst-if subst-if-not nsubst nsubst-if nsubst-if-not
+          substitute substitute-if substitute-if-not
+          nsubstitute nsubstitute-if nsubstitute-if-not)
+   t 3)
+  ((nth nthcdr) nil (2 1))
   (null t)
   (numberp t)
   (open t)
@@ -297,119 +300,72 @@
   (pathname-match-p t (1 2))
   (pprint-dispatch 2) ((pprint-dispatch *) 1)
   (pprint-fill 2) (pprint-linear 2) (pprint-tabular 2)
-  prin1 prin1-to-string
-  princ princ-to-string
-  print-not-readable-object
-  probe-file
-  (random 2) ((random *) 1)
-  random-state-p
-  (rassoc 2) ((rassoc *) 1) (rassoc-if 2) (rassoc-if-not 2)
-  rational rationalize
-  rationalp
-  read
-  read-byte
-  read-char
-  read-char-no-hang
-  (read-delimited-list 2) ((read-delimited-list *) 1)
-  read-from-string
-  read-line
-  read-preserving-whitespace
-  read-sequence
-  readtable-case
-  readtablep
-  realp
-  (reduce 2)
-  (remhash 2) ((remhash *) 1)
-  (remove 2) ((remove *) 1) (remove-if 2) (remove-if-not 2)
-  remove-duplicates
-  rename-file (rename-file *)
-  rename-package
-  replace ((replace *) 2)
-  rest
-  restart-name
-                                        ;(rotate &rest 0)
-                                        ;(rotate* &rest 0)
-                                        ;(shift &rest ?)
-                                        ;(shift* (&rest 2))
-  row-major-aref (row-major-aref *)
-  scale-float (scale-float *)
-  search ((search *) 2)
-  set
-  signum
-  simple-bit-vector-p
-  simple-condition-format-arguments
-  simple-condition-format-control
-  simple-string-p
-  simple-vector-p
-  sin sinh
-  slot-boundp (slot-boundp *)
-  slot-exists-p (slot-exists-p *)
-  slot-value (slot-value *)
-  sort
-  special-operator-p
-  stable-sort
-  standard-char-p
-  stream-element-type
-  stream-error-stream
-  stream-external-format
-  streamp
-  string
-  string-equal ((string-equal *) 2)
-  string-greaterp ((string-greaterp *) 2)
-  (string-left-trim 2) ((string-left-trim *) 1)
-  (string-right-trim 2) ((string-right-trim *) 1)
-  (string-trim 2) ((string-trim *) 1)
-  string-lessp ((string-lessp *) 2)
-  string-not-equal ((string-not-equal *) 2)
-  string-not-greaterp ((string-not-greaterp *) 2)
-  string-not-lessp ((string-not-lessp *) 2)
-  string/= ((string/= *) 2)
-  string< ((string< *) 2)
-  string<= ((string<= *) 2)
-  string= ((string= *) 2)
-  string> ((string> *) 2)
-  string>= ((string>= *) 2)
-  stringp
-  (sublis 2) ((sublis *) 1)
-  subseq
-  subsetp ((subsetp *) 2)
-  (subst 3) (subst-if 3) (subst-if-not 3)
-  (substitute 3) (substitute-if 3) (substitute-if-not 3)
-  subtypep ((subtypep *) 2)
-  sxhash
-  symbol-function
-  symbol-name
-  symbol-package
-  symbol-plist
-  symbol-value
-  symbolp
-  synonym-stream-symbol
-  (tailp 2) ((tailp *) 1)
-  tan tanh
-                                        ; the: todo
-  translate-logical-pathname
-  translate-pathname
-  tree-equal ((tree-equal *) 2)
-  truename
-  two-way-stream-input-stream
-  two-way-stream-output-stream
-  type-error-datum
-  type-error-expected-type
-  type-of
-  typep ((typep *) 2)
-  unbound-slot-instance
-  unintern ((unintern *) 2)
-  union ((union *) 2)
-                                        ;unless todo
-                                        ;when todo
-  upgraded-array-element-type
-  upgraded-complex-part-type
-  user-homedir-pathname
-  vector (vector *)
-  vector-pop
-  (vector-push 2) ((vector-push *) 1)
-  (vector-push-extend 2) ((vector-push-extend *) 1)
-  vectorp
-  wild-pathname-p
-  write
-  write-to-string)
+  ((write prin1 princ print) t) ; To facilitate debugging.
+  ((write-to-string prin1-to-string princ-to-string) t)
+  (print-not-readable-object nil)
+  ((probe-file translate-logical-pathname translate-pathname truename)
+   t)
+  ;; (random t ?) (1 2) or (2 1)?
+  (random-state-p t)
+  ((rational rationalize) t)
+  (rationalp t)
+  ((read read-preserving-whitespace read-byte read-char read-char-no-hang)
+   t)
+  (read-delimited-list t (2 1))
+  ((read-from-string read-line) t) ; Ignore second return value.
+  ;; (read-sequence t ?) (1 2) or (2 1)?
+  (readtable-case nil)
+  (readtablep t)
+  (realp t)
+  (reduce t (2 1))
+  (remhash t (2 1))
+  ;; rename-file
+  ((search replace) t (1 2))
+  (rest nil)
+  (restart-name nil)
+  ;; rotate
+  ;; shift
+  (scale-float t (1 2))
+  (signum t)
+  (simple-bit-vector-p t)
+  ((simple-condition-format-arguments simple-condition-format-control)
+   nil)
+  (simple-string-p t)
+  (simple-vector-p t)
+  ((slot-boundp slot-exists-p slot-value) nil (1 2))
+  ;; ((sort stable-sort) t) No point...
+  (special-operator-p nil)
+  (standard-char-p t)
+  ((stream-element-type stream-external-format) nil)
+  (stream-error-stream nil)
+  (streamp t)
+  (string t)
+  ((string-not-equal string-lessp string-not-greaterp
+                     string-equal string-not-lessp string-greaterp
+                     string/= string< string<= string= string>= string>)
+   t (1 2))
+  ((string-left-trim string-right-trim string-trim) t (2 1))
+  (stringp t)
+  (subseq t (1 2 3))
+  (subtypep t (1 2)) ; Ignore second return value.
+  (sxhash t)
+  ((symbol-function symbol-name symbol-package symbol-plist symbol-value)
+   nil)
+  (symbolp nil)
+  (synonym-stream-symbol nil)
+  (tailp t (2 1))
+  ;; the: todo
+  (tree-equal t (1 2))
+  ((two-way-stream-input-stream two-way-stream-output-stream) t)
+  ((type-error-datum type-error-expected-type) nil)
+  (typep t (1 2))
+  (unbound-slot-instance nil)
+  ;(unintern t ?)
+  ;; Todo: Leave as-is without writeback when test failure.
+  ;; (when unless)
+  ((upgraded-array-element-type upgraded-complex-part-type) t)
+  (user-homedir-pathname nil)
+  (vector-pop t)
+  ;; ((vector-push vector-push-extend) t ?) (2 1) or (1 2)?
+  (vectorp t)
+  (wild-pathname-p nil (1 2)))

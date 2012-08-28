@@ -99,7 +99,7 @@
                                     &optional (spot-indexes 1))
              definition
            `(place-modifier:ensure ',names ,inconceivable-place-p
-                                   :spot-indexes ,spot-indexes
+                                   :spot-indexes ',spot-indexes
                                    :spot-indexes-format ,spot-indexes-format)))))
 
 (defun %actual-spot-index (args-count spot-index name)
