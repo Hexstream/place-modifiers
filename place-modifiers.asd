@@ -10,7 +10,7 @@
   :depends-on (#:map-bind
                #:cartesian-product-switch)
 
-  :version "0.1"
+  :version "1.0"
   :serial cl:t
   :components ((:file "package")
                (:file "info")
