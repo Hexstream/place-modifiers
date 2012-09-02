@@ -298,7 +298,7 @@
                     pathname-name pathname-type pathname-version)
    nil)
   (pathname-match-p t (1 2))
-  (pprint-dispatch 2) ((pprint-dispatch *) 1)
+  ;; (pprint-dispatch t ?) (1 2) or (2 1)?
   (pprint-fill 2) (pprint-linear 2) (pprint-tabular 2)
   ((write prin1 princ print) t) ; To facilitate debugging.
   ((write-to-string prin1-to-string princ-to-string) t)

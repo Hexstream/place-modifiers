@@ -1,14 +1,7 @@
 (in-package #:place-modifiers)
 
-(defvar *infos* (make-hash-table :test 'eq))
-
-(defgeneric place-modifier:name (object))
-(defgeneric place-modifier:inconceivable-place-p (object))
-(defgeneric place-modifier:spot-indexes (object &optional format))
-(defgeneric place-modifier:spot-index (info variant))
-
-(defun place-modifier:parse-operator (name/variant)
-  (case name/variant
+(defun place-modifier:parse-operator (name/variant &key errorp)
+  (typecase name/variant
     ((and (not null) symbol)
      (values name/variant 0))
     ((cons (and (not null) symbol) (cons t null))
@@ -16,98 +9,17 @@
        (if found
            (values (first name/variant) (1+ found))
            (values nil nil))))
-    (t (values nil nil))))
-
-(defclass place-modifier:info () ())
-
-(defclass place-modifier:standard-info (place-modifier:info)
-  ((%names :reader place-modifier:name
-           :type list)
-   (%inconceivable-place-p :reader inconceivable-place-p
-                           :type boolean)
-   (%spot-indexes :type list)))
-
-(defmethod place-modifier:spot-indexes ((info place-modifier:standard-info)
-                                        &optional (format :machine))
-  (let ((indexes (slot-value info '%spot-indexes)))
-    (ecase format
-      (:machine indexes)
-      (:human (map-bind (mapcar) ((index indexes))
-                (if (minusp index)
-                    index
-                    (1+ index)))))))
-
-(defmethod place-modifier:spot-index ((info place-modifier:standard-info) variant)
-  (nth (place-modifier:spot-indexes info) variant))
-
-(defun %spot-index-human-to-machine (spot-index)
-  (ecase (signum spot-index)
-    (-1 spot-index)
-    (0 (error "spot-index of 0 is invalid in ~S format." :human))
-    (1 (1- spot-index))))
-
-(defmethod initialize-instance :around ((info place-modifier:standard-info)
-                                        &key names
-                                        inconceivable-place-p
-                                        spot-indexes
-                                        spot-indexes-format)
-  (setf spot-indexes (etypecase spot-indexes
-                       (integer (list spot-indexes))
-                       (list spot-indexes)))
-  (call-next-method
-   info
-   :names names
-   :inconceivable-place-p inconceivable-place-p
-   :spot-indexes (ecase spot-indexes-format
-                   (:machine spot-indexes)
-                   (:human (mapcar #'%spot-index-human-to-machine spot-indexes)))))
-
-(defmethod print-object ((info place-modifier:standard-info) stream)
-  (print-unreadable-object (info stream :type t)
-    (format stream "~W ~W ~W ~W"
-            (place-modifier:name info)
-            (if (inconceivable-place-p info)
-                :inconceivable-place
-                :possible-place)
-            :spot-indexes
-            (place-modifier:spot-indexes info))))
-
-(defun place-modifier:locate (name &key (errorp t))
-  (check-type name (and symbol (not null)))
-  (or (gethash name *infos*)
-      (when errorp
-	(error "There is no place-modifier named ~S." name))))
-
-(defun place-modifier:ensure (names inconceivable-place-p
-                              &key (spot-indexes 0) (spot-indexes-format :machine))
-  (setf names (etypecase names
-                (list names)
-                (symbol (list names))))
-  (let ((new (make-instance 'place-modifier:standard-info
-                            :names names
-                            :inconceivable-place-p inconceivable-place-p
-                            :spot-indexes spot-indexes
-                            :spot-indexes-format spot-indexes-format)))
-    (map-bind (mapcar) ((name names))
-      (setf (gethash name *infos*) new))))
-
-(defmacro place-modifier:define ((&key (spot-indexes-format :human))
-                                 &body definitions)
-  `(progn
-     ,@(map-bind (mapcar) ((definition definitions))
-         (destructuring-bind (names inconceivable-place-p
-                                    &optional (spot-indexes 1))
-             definition
-           `(place-modifier:ensure ',names ,inconceivable-place-p
-                                   :spot-indexes ',spot-indexes
-                                   :spot-indexes-format ,spot-indexes-format)))))
+    (t (if errorp
+           (error "~S is not a valid place-modifier operator."
+                  name/variant)
+           (values nil nil)))))
 
 (defun %actual-spot-index (args-count spot-index name)
   (cond
     ((minusp spot-index)
      (unless (>= args-count (abs spot-index))
        (error "Place-modifier ~S specifies place in ~S (from end) position ~
-                 and so requires at least this many args, ~S passed."
+               and so requires at least this many args, ~S passed."
               name
               (1+ spot-index)
               args-count))
@@ -115,7 +27,7 @@
     (t
      (unless (> args-count spot-index)
        (error "Place-modifier ~S specifies place in ~S position ~
-                 and so requires at least this many args, ~S passed."
+               and so requires at least this many args, ~S passed."
               name
               (1+ spot-index)
               args-count))
@@ -126,50 +38,105 @@
           (elt sequence index)
           (subseq sequence (1+ index))))
 
-(defun %expand (place-modification-expression env)
+(defun %split (pm-info variant args place-modification-expression)
+  (check-type args list)
+  (%split-at-index
+   args
+   (%actual-spot-index
+    (let ((c (length args)))
+      (when (zerop c)
+        (error "All place modification expressions need ~
+                at least 1 arg. ~S doesn't qualify."
+               place-modification-expression))
+      c)
+    (place-modifier:spot-index pm-info variant)
+    (place-modifier:names pm-info))))
+
+(defun %augment-template (base-template operator before-spot after-spot)
+  (lambda (fill-in)
+    (funcall base-template
+             `(,operator ,@before-spot ,fill-in ,@after-spot))))
+
+(defun %finish (template place env oldp)
+  (multiple-value-bind (vars vals stores writer reader)
+      (get-setf-expansion place env)
+    (when (/= (length stores) 1)
+      (error "~S only supports places with exactly ~
+                         one store variable but place ~S has ~D: ~S."
+             'modify place (length stores) stores))
+    (let* ((old-var (and oldp (gensym (string '#:old))))
+           (wrapped-old-var (and old-var (list old-var))))
+      `(let* (,@vars ,@wrapped-old-var)
+         (multiple-value-bind ,stores
+             ,(funcall
+               template
+               (let ((vars-vals-plist (mapcan #'list vars vals)))
+                 (if oldp
+                     `(setf ,@vars-vals-plist
+                            ,old-var ,reader)
+                     `(progn (setf ,@vars-vals-plist)
+                             ,reader))))
+           ,writer
+           ,@wrapped-old-var)))))
+
+(defun %expand (place-modification-expression env
+                &aux (oldp
+                      (and (typep place-modification-expression
+                                  '(cons (eql :old) (cons t null)))
+                           (prog1 t
+                             (setf place-modification-expression
+                                   (second place-modification-expression))))))
   (labels
-    ((recurse (pme-or-place top-level-p template)
-       (destructuring-bind (operator &rest args) (if (listp pme-or-place)
-                                                     pme-or-place
-                                                     (list pme-or-place))
-         (multiple-value-bind (pm-name variant) (place-modifier:parse-operator operator)
+    ((recurse (pme-or-place state
+                            conservative-template
+                            speculative-template)
+       (unless (listp pme-or-place)
+         (return-from %expand
+           (%finish conservative-template pme-or-place env oldp)))
+       (destructuring-bind (operator &rest args) pme-or-place
+         (multiple-value-bind (pm-name variant)
+             (place-modifier:parse-operator operator)
            (let ((pm-info
                   (and pm-name
                        (place-modifier:locate pm-name :errorp nil))))
-             (cond
-               (pm-info ; spot is a place modification expression
-                (multiple-value-bind (before-spot spot after-spot)
-                    (%split-at-index
-                     args
-                     (%actual-spot-index
-                      (let ((c (length args)))
-                        (when (zerop c)
-                          (error "All place modification expressions need ~
-                                  at least 1 arg. ~S doesn't qualify."
-                                  pme-or-place))
-                        c)
-                      (place-modifier:spot-index pm-info variant)
-                      (place-modifier:name pm-info)))
-                  (recurse spot
-                           nil
-                           (lambda (fill-in)
-                             (funcall template
-                                      `(,operator ,@before-spot
-                                                  ,fill-in
-                                                  ,@after-spot))))))
-               (t ; spot is a place
-                (when top-level-p
-                  (error "~S is not a valid place-modification-expression."
-                         pme-or-place))
-                (multiple-value-bind (vars vals stores writer reader)
-                    (get-setf-expansion pme-or-place env)
-                  `(let* ,vars
-                     (multiple-value-bind ,stores
-                         ,(funcall template
-                                   `(progn (setf ,@(mapcan #'list vars vals))
-                                           ,reader))
-                       ,writer))))))))))
-    (recurse place-modification-expression t #'identity)))
+             (let ((top-level-p (eq state :top-level)))
+               (when (and top-level-p (not pm-info))
+                 (error "~S is not a valid place-modification-expression."
+                        pme-or-place))
+               (when (eq operator :place)
+                 (return-from %expand
+                   (%finish speculative-template (second pme-or-place) env oldp)))
+               (when top-level-p
+                 (setf state :conservative-search)))
+             (multiple-value-bind (before-spot spot after-spot)
+                 (and pm-info (%split pm-info variant args pme-or-place))
+               (flet ((%continue (new-state)
+                        (flet ((augment (template)
+                                 (%augment-template template
+                                                    operator
+                                                    before-spot
+                                                    after-spot)))
+                          (recurse spot
+                                   new-state
+                                   (ecase state
+                                     (:conservative-search
+                                      (augment conservative-template))
+                                     (:speculative-search
+                                      conservative-template))
+                                   (augment speculative-template)))))
+                 (cartesian-product-switch
+                     ((ecase state :conservative-search :speculative-search)
+                      (if pm-info))
+                   ;; :conservative-search
+                   (%continue (if (place-modifiers:inconceivable-place-p pm-info)
+                                  :conservative-search
+                                  :speculative-search))
+                   (%continue :speculative-search) ; start speculative search
+                   ;; :speculative-search
+                   (%continue :speculative-search) ; continue speculative search
+                   (return-from %expand
+                     (%finish conservative-template pme-or-place env oldp))))))))))
+    (recurse place-modification-expression :top-level #'identity #'identity)))
 
 (defmacro modify (&rest place-modification-expressions &environment env)
   `(progn
