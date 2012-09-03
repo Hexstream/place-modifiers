@@ -89,8 +89,13 @@
                                    (second place-modification-expression)))))
                 conservative-place)
   (labels
-    ((recurse (pme-or-place state conservative-template speculative-template)
+    ((not-valid (not-pme)
+       (error "~S is not a valid place-modification-expression."
+              not-pme))
+     (recurse (pme-or-place state conservative-template speculative-template)
        (unless (consp pme-or-place)
+         (when (eq state :top-level)
+           (not-valid pme-or-place))
          (return-from recurse
            (%finish conservative-template conservative-place env oldp)))
        (destructuring-bind (operator &rest args) pme-or-place
@@ -101,8 +106,7 @@
                        (place-modifier:locate pm-name :errorp nil))))
              (let ((top-level-p (eq state :top-level)))
                (when (and top-level-p (not pm-info))
-                 (error "~S is not a valid place-modification-expression."
-                        pme-or-place))
+                 (not-valid pme-or-place))
                (when (eq operator :place)
                  (return-from recurse
                    (%finish speculative-template (second pme-or-place) env oldp)))
