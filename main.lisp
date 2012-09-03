@@ -58,24 +58,25 @@
              `(,operator ,@before-spot ,fill-in ,@after-spot))))
 
 (defun %finish (template place env oldp)
+  (print place)
   (multiple-value-bind (vars vals stores writer reader)
       (get-setf-expansion place env)
     (when (/= (length stores) 1)
       (error "~S only supports places with exactly ~
-                         one store variable but place ~S has ~D: ~S."
+              one store variable but place ~S has ~D: ~S."
              'modify place (length stores) stores))
     (let* ((old-var (and oldp (gensym (string '#:old))))
            (wrapped-old-var (and old-var (list old-var))))
       `(let* (,@vars ,@wrapped-old-var)
          (multiple-value-bind ,stores
-             ,(funcall
+             ,(print (funcall
                template
-               (let ((vars-vals-plist (mapcan #'list vars vals)))
+               (print (let ((vars-vals-plist (mapcan #'list vars vals)))
                  (if oldp
                      `(setf ,@vars-vals-plist
                             ,old-var ,reader)
                      `(progn (setf ,@vars-vals-plist)
-                             ,reader))))
+                             ,reader))))))
            ,writer
            ,@wrapped-old-var)))))
 
@@ -85,14 +86,13 @@
                                   '(cons (eql :old) (cons t null)))
                            (prog1 t
                              (setf place-modification-expression
-                                   (second place-modification-expression))))))
+                                   (second place-modification-expression)))))
+                conservative-place)
   (labels
-    ((recurse (pme-or-place state
-                            conservative-template
-                            speculative-template)
-       (unless (listp pme-or-place)
-         (return-from %expand
-           (%finish conservative-template pme-or-place env oldp)))
+    ((recurse (pme-or-place state conservative-template speculative-template)
+       (unless (consp pme-or-place)
+         (return-from recurse
+           (%finish conservative-template conservative-place env oldp)))
        (destructuring-bind (operator &rest args) pme-or-place
          (multiple-value-bind (pm-name variant)
              (place-modifier:parse-operator operator)
@@ -104,7 +104,7 @@
                  (error "~S is not a valid place-modification-expression."
                         pme-or-place))
                (when (eq operator :place)
-                 (return-from %expand
+                 (return-from recurse
                    (%finish speculative-template (second pme-or-place) env oldp)))
                (when top-level-p
                  (setf state :conservative-search)))
@@ -120,6 +120,7 @@
                                    new-state
                                    (ecase state
                                      (:conservative-search
+                                      (setf conservative-place pme-or-place)
                                       (augment conservative-template))
                                      (:speculative-search
                                       conservative-template))
@@ -134,8 +135,7 @@
                    (%continue :speculative-search) ; start speculative search
                    ;; :speculative-search
                    (%continue :speculative-search) ; continue speculative search
-                   (return-from %expand
-                     (%finish conservative-template pme-or-place env oldp))))))))))
+                   (%finish conservative-template conservative-place env oldp)))))))))
     (recurse place-modification-expression :top-level #'identity #'identity)))
 
 (defmacro modify (&rest place-modification-expressions &environment env)
