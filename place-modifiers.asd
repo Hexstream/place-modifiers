@@ -7,9 +7,10 @@
 
   :description "Essentially gives access to hundreds of modify macros with one single symbol: MODIFY."
 
-  :depends-on (#:map-bind)
+  :depends-on (#:map-bind
+               #:cartesian-product-switch)
 
-  :version "2.0"
+  :version "2.0.1"
   :serial cl:t
   :components ((:file "package")
                (:file "info")
