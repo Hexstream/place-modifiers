@@ -57,7 +57,8 @@
     (funcall base-template
              `(,operator ,@before-spot ,fill-in ,@after-spot))))
 
-(defun %finish (template place env oldp)
+(defun %finish (template place env oldp caller)
+  (print caller)
   (print place)
   (multiple-value-bind (vars vals stores writer reader)
       (get-setf-expansion place env)
@@ -89,58 +90,59 @@
                                    (second place-modification-expression)))))
                 conservative-place)
   (labels
-    ((not-valid (not-pme)
-       (error "~S is not a valid place-modification-expression."
-              not-pme))
-     (recurse (pme-or-place state conservative-template speculative-template)
-       (unless (consp pme-or-place)
-         (when (eq state :top-level)
-           (not-valid pme-or-place))
-         (return-from recurse
-           (%finish conservative-template conservative-place env oldp)))
-       (destructuring-bind (operator &rest args) pme-or-place
-         (multiple-value-bind (pm-name variant)
-             (place-modifier:parse-operator operator)
-           (let ((pm-info
-                  (and pm-name
-                       (place-modifier:locate pm-name :errorp nil))))
-             (let ((top-level-p (eq state :top-level)))
-               (when (and top-level-p (not pm-info))
-                 (not-valid pme-or-place))
-               (when (eq operator :place)
-                 (return-from recurse
-                   (%finish speculative-template (second pme-or-place) env oldp)))
-               (when top-level-p
-                 (setf state :conservative-search)))
-             (multiple-value-bind (before-spot spot after-spot)
-                 (and pm-info (%split pm-info variant args pme-or-place))
-               (flet ((%continue (new-state)
-                        (flet ((augment (template)
-                                 (%augment-template template
-                                                    operator
-                                                    before-spot
-                                                    after-spot)))
-                          (recurse spot
-                                   new-state
-                                   (ecase state
-                                     (:conservative-search
-                                      (setf conservative-place pme-or-place)
-                                      (augment conservative-template))
-                                     (:speculative-search
-                                      conservative-template))
-                                   (augment speculative-template)))))
-                 (cartesian-product-switch
-                     ((ecase state :conservative-search :speculative-search)
-                      (if pm-info))
-                   ;; :conservative-search
-                   (%continue (if (place-modifiers:inconceivable-place-p pm-info)
-                                  :conservative-search
-                                  :speculative-search))
-                   (%continue :speculative-search) ; start speculative search
-                   ;; :speculative-search
-                   (%continue :speculative-search) ; continue speculative search
-                   (%finish conservative-template conservative-place env oldp)))))))))
-    (recurse place-modification-expression :top-level #'identity #'identity)))
+      ((recurse (pme-or-place state conservative-template speculative-template
+                              &aux pm-name pm-info variant
+                              before-spot spot after-spot)
+         (cond
+           ((consp pme-or-place)
+            (let ((operator (first pme-or-place)))
+              (when (eq operator :place)
+                (return-from recurse
+                  (%finish speculative-template (second pme-or-place) env oldp
+                           :explicit-place)))
+              (setf (values pm-name variant)
+                    (place-modifier:parse-operator operator)
+                    pm-info
+                    (and pm-name (place-modifier:locate pm-name :errorp nil))))
+            (when pm-info
+              (setf (values before-spot spot after-spot)
+                    (%split pm-info variant (rest pme-or-place) pme-or-place))))
+           (t (return-from recurse
+                (%finish conservative-template conservative-place env oldp
+                         :atom))))
+         (flet ((%continue (new-state)
+                  (flet ((augment (template)
+                           (%augment-template template
+                                              (first pme-or-place)
+                                              before-spot
+                                              after-spot)))
+                    (recurse spot
+                             new-state
+                             (ecase state
+                               (:conservative-search
+                                (setf conservative-place pme-or-place)
+                                (augment conservative-template))
+                               (:speculative-search
+                                conservative-template))
+                             (augment speculative-template)))))
+           (cartesian-product-switch
+               ((ecase state :conservative-search :speculative-search)
+                (if pm-info))
+             ;; :conservative-search
+             (%continue (if (place-modifiers:inconceivable-place-p pm-info)
+                            :conservative-search
+                            :speculative-search))
+             (%continue :speculative-search) ; start speculative search
+             ;; :speculative-search
+             (%continue :speculative-search) ; continue speculative search
+             (%finish conservative-template conservative-place env oldp
+                      :necessarily-place)))))
+    (if (and (consp place-modification-expression)
+             (place-modifiers:locate (first place-modification-expression)))
+        (recurse place-modification-expression :conservative-search
+                 #'identity #'identity)
+        (error "~S is not a valid place-modification-expression."
+               place-modification-expression))))
 
 (defmacro modify (&rest place-modification-expressions &environment env)
   `(progn
