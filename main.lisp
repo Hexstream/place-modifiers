@@ -81,6 +81,27 @@
            ,writer
            ,@wrapped-old-var)))))
 
+(defun %check-and-compute (pme-or-place escape env oldp
+                           conservative-template conservative-place
+                           speculative-template)
+  (etypecase pme-or-place
+    (atom
+     (funcall escape
+              (%finish conservative-template conservative-place env oldp
+                       :atom)))
+    ((cons (eql :place))
+     (funcall escape
+              (%finish speculative-template (second pme-or-place) env oldp
+                       :explicit-place)))
+    (list
+     (destructuring-bind (operator &rest args) pme-or-place
+       (multiple-value-bind (pm-name variant)
+           (place-modifier:parse-operator operator)
+         (let ((pm-info (and pm-name (place-modifier:locate pm-name :errorp nil))))
+           (multiple-value-call #'values
+             pm-info
+             (and pm-info (%split pm-info variant args pme-or-place)))))))))
+
 (defun %expand (place-modification-expression env
                 &aux (oldp
                       (and (typep place-modification-expression
@@ -90,53 +111,42 @@
                                    (second place-modification-expression)))))
                 conservative-place)
   (labels
-      ((recurse (pme-or-place state conservative-template speculative-template
-                              &aux pm-name pm-info variant
-                              before-spot spot after-spot)
-         (cond
-           ((consp pme-or-place)
-            (let ((operator (first pme-or-place)))
-              (when (eq operator :place)
-                (return-from recurse
-                  (%finish speculative-template (second pme-or-place) env oldp
-                           :explicit-place)))
-              (setf (values pm-name variant)
-                    (place-modifier:parse-operator operator)
-                    pm-info
-                    (and pm-name (place-modifier:locate pm-name :errorp nil))))
-            (when pm-info
-              (setf (values before-spot spot after-spot)
-                    (%split pm-info variant (rest pme-or-place) pme-or-place))))
-           (t (return-from recurse
-                (%finish conservative-template conservative-place env oldp
-                         :atom))))
-         (flet ((%continue (new-state)
-                  (flet ((augment (template)
-                           (%augment-template template
-                                              (first pme-or-place)
-                                              before-spot
-                                              after-spot)))
-                    (recurse spot
-                             new-state
-                             (ecase state
-                               (:conservative-search
-                                (setf conservative-place pme-or-place)
-                                (augment conservative-template))
-                               (:speculative-search
-                                conservative-template))
-                             (augment speculative-template)))))
-           (cartesian-product-switch
-               ((ecase state :conservative-search :speculative-search)
-                (if pm-info))
-             ;; :conservative-search
-             (%continue (if (place-modifiers:inconceivable-place-p pm-info)
-                            :conservative-search
-                            :speculative-search))
-             (%continue :speculative-search) ; start speculative search
-             ;; :speculative-search
-             (%continue :speculative-search) ; continue speculative search
-             (%finish conservative-template conservative-place env oldp
-                      :necessarily-place)))))
+      ((recurse (pme-or-place state conservative-template speculative-template)
+         (multiple-value-bind (pm-info before-spot spot after-spot)
+             (%check-and-compute pme-or-place
+                                 (lambda (value)
+                                   (return-from recurse value))
+                                 env oldp
+                                 conservative-template conservative-place
+                                 speculative-template)
+           (flet ((%continue (new-state)
+                    (flet ((augment (template)
+                             (%augment-template template
+                                                (first pme-or-place)
+                                                before-spot
+                                                after-spot)))
+                      (recurse spot
+                               new-state
+                               (ecase state
+                                 (:conservative-search
+                                  (setf conservative-place pme-or-place)
+                                  (augment conservative-template))
+                                 (:speculative-search
+                                  conservative-template))
+                               (augment speculative-template)))))
+             (cartesian-product-switch ((ecase state
+                                          :conservative-search
+                                          :speculative-search)
+                                        (if pm-info))
+               ;; :conservative-search
+               (%continue (if (place-modifiers:inconceivable-place-p pm-info)
+                              :conservative-search
+                              :speculative-search))
+               (%continue :speculative-search) ; start speculative search
+               ;; :speculative-search
+               (%continue :speculative-search) ; continue speculative search
+               (%finish conservative-template conservative-place env oldp
+                        :necessarily-place))))))
     (if (and (consp place-modification-expression)
              (place-modifiers:locate (first place-modification-expression)))
         (recurse place-modification-expression :conservative-search
