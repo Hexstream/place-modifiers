@@ -3,6 +3,9 @@
 (defvar *infos* (make-hash-table :test 'eq))
 (defparameter place-modifier:*spot-index-format* :human)
 
+(defun map-infos (function)
+  (maphash function *infos*))
+
 (defgeneric place-modifier:names (object))
 (defgeneric place-modifier:inconceivable-place-p (object))
 (defgeneric place-modifier:spot-indexes (object &key))

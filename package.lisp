@@ -6,6 +6,7 @@
   (:export #:modify ; import this single symbol for normal usage.
 
            #:*spot-index-format*
+           #:map-infos
            #:info
            #:standard-info
            #:name
