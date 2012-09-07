@@ -92,7 +92,8 @@
    t (1 -1))
   ((character characterp) t)
   (class-name t)
-  ((class-of type-of) nil)
+  ;; Let's be pragmatic, even if a crazy dialect could(?) allow (setf class-of).
+  ((class-of type-of) t)
   (close t (1 2))
   (coerce t (1 2)))
 
