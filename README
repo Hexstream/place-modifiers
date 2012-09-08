@@ -1,8 +1,259 @@
 Project's home: http://www.hexstreamsoft.com/projects/place-modifiers/
 
 
-place-modifiers essentially gives access to hundreds of modify macros
-with one single symbol: MODIFY.
+place-modifiers essentially gives access to hundreds of modify-macros
+through one single macro: MODIFY.
+
+(Things start a bit slowly, but don't worry, it gets more and more interesting!)
+
+
+3 trivial examples
+------------------
+
+(let ((place 7))
+  (modify (1+ place))
+  place)
+==
+(let ((place 7))
+  (incf place)
+  place)
+=> 8
+
+(let ((place '(old)))
+  (modify (cons 'new place))
+  place)
+==
+(let ((place '(old)))
+  (push 'new place)
+  place)
+=> (NEW OLD)
+
+;; Reminder for newbies: STRING-EQUAL is case-insensitive comparison.
+(let ((place '("hello" "hi")))
+  (modify (adjoin "HELLO" place :test #'string-equal))
+  place)
+==
+(let ((place '("hello" "hi")))
+  (pushnew "HELLO" place :test #'string-equal)
+  place)
+=> ("hello" "hi")
+
+
+Equivalent to hundreds of modify macros!
+----------------------------------------
+
+Not very exciting so far. But INCF, PUSH and PUSHNEW give you access to 3
+modify-macros, whereas MODIFY gives you access to literally hundreds!
+
+;; Traditionally "nreversef"
+(let ((place (list 1 2 3)))
+  (modify (nreverse place))
+  place)
+=> (3 2 1)
+
+;; "string-upcasef"?...
+(let ((place "Yay"))
+  (modify (string-upcase place))
+  place)
+=> "YAY"
+
+;; "listf"?
+(let ((place 'atom))
+  (modify (list place))
+  place)
+=> (ATOM)
+
+;; "class-off"?
+(let ((place 'symbol))
+  (modify (class-of place))
+  place)
+=> #<BUILT-IN-CLASS SYMBOL>
+
+;; "parse-integerf"?
+(let ((place "1986"))
+  (modify (parse-integer place))
+  place)
+=> 1986
+
+
+Why not just write it out by hand?
+----------------------------------
+
+One might wonder, why not just write this instead?
+
+(let ((place (list 1 2 3)))
+  (setf place (nreverse place))
+  place)
+;; instead of
+(let ((place (list 1 2 3)))
+  (modify (nreverse place))
+  place)
+
+(And forget about (nreverse (list 1 2 3)) or (list 3 2 1) because
+that's missing the point. ;P) The answer is that "place" might of
+course be much longer-named and/or more complex than this. And of
+course, multiple evaluation of the place will be averted, which is
+important when side-effects and/or expensive accesses are involved.
+
+(let ((my-list-of-three-elements (list 1 2 3)))
+  (modify (nreverse my-list-of-three-elements))
+  place)
+==
+(let ((my-list-of-three-elements (list 1 2 3)))
+  (setf my-list-of-three-elements (nreverse my-list-of-three-elements))
+  my-list-of-three-elements)
+
+(let ((hash (make-hash-table)))
+  (setf (gethash 'key hash) 10)
+  (modify (/ (gethash (print 'key) hash) 5))
+  (gethash 'key hash))
+==
+(let ((hash (make-hash-table)))
+  (setf (gethash 'key hash) 10)
+  (let ((key (print 'key)))
+    (setf (gethash key hash) (/ (gethash key hash) 5)))
+  (gethash 'key hash))
+-| KEY
+=> 2, T
+
+
+MODIFY return values, :old
+--------------------------
+
+MODIFY normally returns the new value(s) of the place, per the usual conventions:
+
+(let ((place 2))
+  (values (modify (expt place 8))
+          place))
+=> 256, 256
+
+But one simple yet very useful feature is to be able to return the old value instead:
+
+(let ((place 2))
+  (values (modify (:old (expt place 8)))
+          place))
+=> 2, 256
+
+
+Ambiguity: place-modification-expression VS place
+-------------------------------------------------
+
+Some place-modifiers are also valid places. One example is AREF. In
+the following example, how does MODIFY know which of "(aref object 0)"
+or "object" should be interpreted as being the place to modify?
+
+(let ((object (vector 'e)))
+  (values (modify (:old (list (aref object 0))))
+          object))
+=> E, #((E))
+or #(E), (E) ?
+
+
+Conservative recursion through "spots" by default
+-------------------------------------------------
+
+It's simple: MODIFY is "conservative" by default, so as soon as it
+encounters a possible place while recursing through the "spots"
+(described and explained below), then it will treat that as the place.
+This is the most intuitive possible default and is usually what you
+want.
+
+;; "(aref object 0)" is the place to modify, not "object". Conservative default.
+(let ((object (vector 'e)))
+  (values (modify (:old (list (aref object 0))))
+          object))
+=> E, #((E))
+
+
+Inconceivable places
+--------------------
+
+Some place-modifiers are known to MODIFY as being "inconceivable
+places", which allows conservative recursion to proceed (at least) one
+step further, much conveniently:
+
+(let ((list '((d . 4))))
+  (values (modify (:old (cons 'first (list* 'a 1 'b 2 (acons 'c 3 list)))))
+          list))
+=> ((D . 4)), (FIRST A 1 B 2 (C . 3) (D . 4))
+
+
+Speculative recursion through "spots" in search of explicit :place form
+-----------------------------------------------------------------------
+
+After finding the most conservative place, MODIFY will still
+speculatively recurse through the remaining "spots" in search of a
+:place "local special form", which would explicitly indicate at what
+level lies the intended place, overriding the conservative behavior.
+
+(let ((object (vector 'e)))
+  (values (modify (:old (list (aref (:place object) 0))))
+          object))
+=> #(E), (E) ?
+
+
+Possible place at top-level: treated as place-modification-expression
+---------------------------------------------------------------------
+
+Of course, the "top-level" (ignoring :old) of MODIFY can only accept a
+place-modification-expression and not a place, so there can be no
+ambiguity there:
+
+(let ((object (vector 'e)))
+  (values (modify (:old (aref (:place object) 0)))
+          object))
+=> #(E), E
+
+
+Multiple place-modification-expressions: SETF-like
+--------------------------------------------------
+
+MODIFY can accept multiple place-modification-expressions, in which
+case the modifications will happen in sequence, much in the same way
+as SETF with multiple places.
+
+(let ((x 'a) (y 'b))
+  (values (modify (list x)
+                  (:old (cons y x)))
+          x
+          y))
+==
+(let ((x 'a) (y 'b))
+  (values (progn (modify (list x))
+                 (modify (:old (cons y x))))
+          x
+          y))
+=> (A), (B A), B
+
+
+Place-modifier variants
+-----------------------
+
+Up to this point, we've always used the "primary variant", which is
+the one you'll need most often, but each place-modifier kind can have
+up to 4 variants, though most only have one or two. The "variant"
+determines which argument is treated as the "spot", positionally.
+
+;; Primary variant
+
+
+The determination of which variant maps to which spot is made by the
+definer of the place-modifier.
+
+Some statistics about place-modifier variants
+---------------------------------------------
+
+(let ((variant-counts (vector 0 0 0 0)))
+  (place-modifiers:map-infos
+   (lambda (name info)
+     (declare (ignore name))
+     (modify (1+ (aref variant-counts
+                       (1- (length (spot-indexes info))))))))
+  variant-counts)
+=> #(301 172 35 2)
+
+So as of version 2.1, there are 301 place-modifiers with one single
+variant, 172 with 2 variants, and only 37 with 3 or 4 variants.
 
 
 This library is in the Public Domain.
