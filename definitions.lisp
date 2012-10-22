@@ -18,7 +18,7 @@
   (adjustable-array-p nil)
   (allocate-instance t)
   (alpha-char-p t)
-  (alphanumericp 1)
+  (alphanumericp t 1)
   ((and or) t (1 -1))
   ((append nconc list*) t (-1 1))
   (apply nil (-1 2 1))
@@ -300,7 +300,7 @@
    nil)
   (pathname-match-p t (1 2))
   ;; (pprint-dispatch t ?) (1 2) or (2 1)?
-  (pprint-fill 2) (pprint-linear 2) (pprint-tabular 2)
+  (pprint-fill t 2) (pprint-linear t 2) (pprint-tabular t 2)
   ((write prin1 princ print) t) ; To facilitate debugging.
   ((write-to-string prin1-to-string princ-to-string) t)
   (print-not-readable-object nil)
