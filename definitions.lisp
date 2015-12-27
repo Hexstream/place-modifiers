@@ -22,7 +22,7 @@
   ((and or) t (1 -1))
   ((append nconc list*) t (-1 1))
   (apply nil (-1 2 1))
-  (funcall nil (2 -1 1))
+  (funcall t (2 -1 1))
   (apropos-list t (1 2))
   (aref nil (1 2 -1))
   ((elt svref row-major-aref) nil (1 2))
