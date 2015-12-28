@@ -7,10 +7,9 @@
 
   :description "Essentially gives access to hundreds of modify-macros through one single macro: MODIFY."
 
-  :depends-on (#:map-bind
-               #:cartesian-product-switch)
+  :depends-on (#:map-bind)
 
-  :version "2.1"
+  :version "3.0"
   :serial cl:t
   :components ((:file "package")
                (:file "info")

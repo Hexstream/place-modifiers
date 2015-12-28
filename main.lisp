@@ -1,56 +1,23 @@
 (in-package #:place-modifiers)
 
-(defun place-modifier:parse-operator (name/variant &key errorp)
-  (typecase name/variant
-    ((and (not null) symbol)
-     (values name/variant 0))
-    ((cons (and (not null) symbol) (cons t null))
-     (let ((found (position (second name/variant) '(* ** ***))))
-       (if found
-           (values (first name/variant) (1+ found))
-           (values nil nil))))
-    (t (if errorp
-           (error "~S is not a valid place-modifier operator."
-                  name/variant)
-           (values nil nil)))))
-
-(defun %actual-spot-index (args-count spot-index name)
+(defun %actual-spot-index (args-count spot-index)
   (cond
     ((minusp spot-index)
-     (unless (>= args-count (abs spot-index))
-       (error "Place-modifier ~S specifies place in ~S (from end) position ~
-               and so requires at least this many args, ~S passed."
-              name
-              (1+ spot-index)
-              args-count))
-     (+ args-count spot-index))
+     (when (>= args-count (abs spot-index))
+       (+ args-count spot-index)))
     (t
-     (unless (> args-count spot-index)
-       (error "Place-modifier ~S specifies place in ~S position ~
-               and so requires at least this many args, ~S passed."
-              name
-              (1+ spot-index)
-              args-count))
-     spot-index)))
+     (when (> args-count spot-index)
+       spot-index))))
 
-(defun %split-at-index (sequence index)
-  (values (subseq sequence 0 index)
-          (elt sequence index)
-          (subseq sequence (1+ index))))
+(defun %actual-spot-value (list spot-index)
+  (when spot-index
+    (let ((actual-spot-index (%actual-spot-index (length list) spot-index)))
+      (when actual-spot-index
+        (nth actual-spot-index list)))))
 
-(defun %split (pm-info variant args place-modification-expression)
-  (check-type args list)
-  (%split-at-index
-   args
-   (%actual-spot-index
-    (let ((c (length args)))
-      (when (zerop c)
-        (error "All place modification expressions need ~
-                at least 1 arg. ~S doesn't qualify."
-               place-modification-expression))
-      c)
-    (place-modifier:spot-index pm-info variant)
-    (place-modifier:names pm-info))))
+#+nil(error "All place modification expressions need ~
+             at least 1 arg. ~S doesn't qualify."
+       place-modification-expression)
 
 (defun %augment-template (base-template operator before-spot after-spot)
   (lambda (fill-in)
@@ -74,8 +41,10 @@
                  (if oldp
                      `(setf ,@vars-vals-plist
                             ,old-var ,reader)
-                     `(progn (setf ,@vars-vals-plist)
-                             ,reader))))
+                     (if vars-vals-plist
+                         `(progn (setf ,@vars-vals-plist)
+                                 ,reader)
+                         reader))))
            ,writer
            ,@wrapped-old-var)))))
 
@@ -83,72 +52,89 @@
   (declare (ignore args))
   (values))
 
-(defun %analyze (pme-or-place
-                 &key (on-pme #'nop) (on-place #'nop) (on-ambiguous #'nop)
-                 (on-place-marker #'nop))
+(defun %analyze (pme-or-place &key
+                                (on-place #'nop)
+                                (on-pme #'nop)
+                                (on-ambiguous #'nop))
   (etypecase pme-or-place
     (atom
-     (funcall on-place pme-or-place))
+     (funcall on-place pme-or-place :assumed))
     ((cons (eql :place))
      (destructuring-bind (place) (rest pme-or-place)
-       (funcall on-place-marker place)))
+       (funcall on-place place :explicit)))
     (list
-     (destructuring-bind (operator &rest args) pme-or-place
-       (multiple-value-bind (pm-name variant)
-           (place-modifier:parse-operator operator)
-         (let ((pm-info (and pm-name (place-modifier:locate pm-name :errorp nil))))
-           (if (place-modifier:inconceivable-place-p pm-info)
-               (multiple-value-call on-pme pme-or-place pm-info pm-name variant
-                                    (%split pm-info variant args pme-or-place))
-               (funcall on-ambiguous pme-or-place pm-info variant))))))))
+     (destructuring-bind (pm-name &rest args) pme-or-place
+       (declare (ignore args))
+       (let ((pm-info (and pm-name (place-modifier:locate pm-name :errorp nil))))
+         (if pm-info
+             (funcall (if (place-modifier:inconceivable-place-p pm-info)
+                          on-pme
+                          on-ambiguous)
+                      pme-or-place)
+             (funcall on-place pme-or-place :assumed)))))))
+
+(defun %map-spots (function args)
+  (maplist (lambda (tail)
+             (funcall function
+                      (ldiff args tail)
+                      (first tail)
+                      (rest tail)))
+           args))
+
+(defun %choose-best (results-list default-spot-index)
+  (values-list
+   (let ((explicit-place-results
+          (remove :assumed results-list :key #'third)))
+     (case (length explicit-place-results)
+       (0 (%actual-spot-value results-list default-spot-index))
+       (1 (first explicit-place-results))
+       (t (error "Multiple (~A) explicit places found:~{~%~^~S~}"
+                 (length explicit-place-results)
+                 (mapcar #'second explicit-place-results)))))))
 
 (defun %augmented-template-caller (function template)
-  (lambda (pme pm-info name variant before-spot spot after-spot)
-    (declare (ignore pme pm-info variant))
-    (funcall function spot
-             (%augment-template template name before-spot after-spot))))
+  (lambda (pme)
+    (let ((operator (first pme)))
+      (%choose-best (%map-spots (lambda (before-spot spot after-spot)
+                                  (multiple-value-list
+                                   (funcall function spot
+                                            (%augment-template template
+                                                               operator
+                                                               before-spot
+                                                               after-spot))))
+                                (rest pme))
+                    (default-spot-index (place-modifier:locate operator))))))
+
+(defun %make-speculative-walk-handler (function template)
+  (lambda (ambiguous)
+    (multiple-value-bind (full-template place kind)
+        (%walk-speculatively-non-top-level ambiguous template)
+      (multiple-value-call function
+        (if (eq kind :explicit)
+            (values full-template place)
+            (values template ambiguous))
+        kind))))
 
 (defun %walk-conservatively-non-top-level (pme-or-place)
   (labels ((recurse (pme-or-place template)
-             (let ((found-place (lambda (place)
-                                  (values t place template))))
-               (%analyze
-                pme-or-place
-                :on-pme
-                (%augmented-template-caller #'recurse template)
-                :on-place found-place
-                :on-place-marker found-place
-                :on-ambiguous
-                (lambda (ambiguous pm-info variant)
-                  (declare (ignore pm-info variant))
-                  (multiple-value-bind (speculation-successful-p
-                                        explicit-place
-                                        full-template)
-                      (%walk-speculatively-non-top-level ambiguous template)
-                    (if speculation-successful-p
-                        (values t explicit-place full-template)
-                        (values t ambiguous template))))))))
+             (%analyze
+              pme-or-place
+              :on-place (lambda (place kind)
+                          (values template place kind))
+              :on-pme (%augmented-template-caller #'recurse template)
+              :on-ambiguous (%make-speculative-walk-handler #'values template))))
     (recurse pme-or-place #'identity)))
 
 (defun %walk-speculatively-non-top-level (pme-or-place template)
   (labels ((recurse (pme-or-place template)
-             (%analyze
-              pme-or-place
-              :on-place-marker (lambda (place)
-                                 (values t place template))
-              :on-place (lambda (place)
-                          (declare (ignore place))
-                          (values nil nil nil))
-              :on-pme (%augmented-template-caller #'recurse template)
-              :on-ambiguous
-              (lambda (ambiguous pm-info variant)
-                (multiple-value-bind (before-spot spot after-spot)
-                    (%split pm-info variant (rest ambiguous) ambiguous)
-                  (recurse spot
-                           (%augment-template template
-                                              (first ambiguous)
-                                              before-spot
-                                              after-spot)))))))
+             (let ((augmented-template-caller
+                    (%augmented-template-caller #'recurse template)))
+               (%analyze
+                pme-or-place
+                :on-place (lambda (place kind)
+                            (values template place kind))
+                :on-pme augmented-template-caller
+                :on-ambiguous augmented-template-caller))))
     (recurse pme-or-place template)))
 
 (defun %expand (place-modification-expression env)
@@ -157,29 +143,22 @@
                     (destructuring-bind (pme) (cdr place-modification-expression)
                       (prog1 t
                         (setf place-modification-expression pme)))))
-         (place-at-top-level
-          (lambda (place)
-            (error "Found the following place at top-level ~
-                    instead of place-modification-expression:~%~S"
-                   place)))
          (finish
-          (lambda (successp &optional place template)
-            (if successp
-                (%finish template place env oldp)
-                (%finish #'identity place-modification-expression env oldp)))))
+          (lambda (template place kind)
+            (declare (ignore kind))
+            (%finish template place env oldp))))
     (%analyze place-modification-expression
+              :on-place
+              (lambda (place kind)
+                (error "Found the following (~(~A~)) place at top-level ~
+                        instead of place-modification-expression:~%~S"
+                       kind place))
               :on-pme
-              (lambda (pme &rest other-args)
-                (declare (ignore other-args))
+              (lambda (pme)
                 (multiple-value-call finish
                   (%walk-conservatively-non-top-level pme)))
               :on-ambiguous
-              (lambda (ambiguous pm-info variant)
-                (declare (ignore pm-info variant))
-                (multiple-value-call finish
-                  (%walk-speculatively-non-top-level ambiguous #'identity)))
-              :on-place place-at-top-level
-              :on-place-marker place-at-top-level)))
+              (%make-speculative-walk-handler finish #'identity))))
 
 (defmacro modify (&rest place-modification-expressions &environment env)
   `(progn
