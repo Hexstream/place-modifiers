@@ -14,4 +14,6 @@
   :components ((:file "package")
                (:file "info")
                (:file "main")
-               (:file "definitions")))
+               (:file "definitions"))
+
+  :in-order-to ((asdf:test-op (asdf:test-op #:place-modifiers_tests))))
