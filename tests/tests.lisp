@@ -4,6 +4,9 @@
 
 (cl:in-package #:place-modifiers_tests)
 
+(defmacro are (comp expected form &optional description &rest format-args)
+  `(is ,comp ,expected (multiple-value-list ,form) ,description ,@format-args))
+
 (define-test "featured-examples"
   ;;; 3 trivial examples
   (is = 8
@@ -42,38 +45,38 @@
         place))
 
   ;;; MODIFY return values, :old
-  (is equal '(256 256)
-      (let ((place 2))
-        (list (modify (expt place 8))
-              place)))
-  (is equal '(2 256)
-      (let ((place 2))
-        (list (modify (:old (expt place 8)))
-              place)))
+  (are equal '(256 256)
+       (let ((place 2))
+         (values (modify (expt place 8))
+                 place)))
+  (are equal '(2 256)
+       (let ((place 2))
+         (values (modify (:old (expt place 8)))
+                 place)))
 
   ;;; PME VS place
-  (is equalp '(e #((e)))
-      (let ((object (vector 'e)))
-        (list (modify (:old (list (aref object 0))))
-              object)))
-  (is equal '(((d . 4))
-        (first a 1 B 2 (c . 3) (d . 4)))
-      (let ((list '((d . 4))))
-        (list (modify (:old (cons 'first (list* 'a 1 'b 2 (acons 'c 3 list)))))
-              list)))
-  (is equalp '(#(e) (e))
-      (let ((object (vector 'e)))
-        (list (modify (:old (list (aref (:place object) 0))))
-              object)))
-  (is equalp '(#(e) e)
-      (let ((object (vector 'e)))
-        (list (modify (:old (aref (:place object) 0)))
-              object)))
+  (are equalp '(e #((e)))
+       (let ((object (vector 'e)))
+         (values (modify (:old (list (aref object 0))))
+                 object)))
+  (are equal '(((d . 4))
+               (first a 1 B 2 (c . 3) (d . 4)))
+       (let ((list '((d . 4))))
+         (values (modify (:old (cons 'first (list* 'a 1 'b 2 (acons 'c 3 list)))))
+                 list)))
+  (are equalp '(#(e) (e))
+       (let ((object (vector 'e)))
+         (values (modify (:old (list (aref (:place object) 0))))
+                 object)))
+  (are equalp '(#(e) e)
+       (let ((object (vector 'e)))
+         (values (modify (:old (aref (:place object) 0)))
+                 object)))
 
   ;; Multiple PMEs: setf-like
-  (is equal '((a) (b a) b)
-      (let ((x 'a) (y 'b))
-        (list (modify (list x)
-                      (:old (cons y x)))
-              x
-              y))))
+  (are equal '((a) (b a) b)
+       (let ((x 'a) (y 'b))
+         (values (modify (list x)
+                         (:old (cons y x)))
+                 x
+                 y))))
