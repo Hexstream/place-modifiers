@@ -85,7 +85,7 @@
 
       <section id="introduction">
 
-        <p><cite class="common-lisp library">place-modifiers</cite> essentially gives access to hundreds of modify-macros through one single macro: <code class="common-lisp library macro operator">modify</code>.</p>
+        <p><cite class="common-lisp library">place-modifiers</cite> essentially gives access to hundreds of modify-macros through one single macro: <code class="relevant">modify</code>.</p>
 
       </section>
 
@@ -98,7 +98,7 @@
           <li><a href="#trivial-examples">3 trivial examples</a></li>
           <li><a href="#hundreds-of-modify-macros">Equivalent to hundreds of modify macros!</a></li>
           <li><a href="#why-not-by-hand">Why not just write it out by hand?</a></li>
-          <li><a href="#modify-return-values"><code class="common-lisp library macro operator">modify</code> return values, <code class="common-lisp library marker">:old</code></a></li>
+          <li><a href="#modify-return-values"><code class="relevant">modify</code> return values, <code class="relevant marker">:old</code></a></li>
           <li><a href="#place-modification-expression-vs-place"><abbr title="place-modification-expression">PME</abbr> VS place</a></li>
 
           <li><a href="#multiple-place-modification-expressions">Multiple <abbr title="place-modification-expression">PME</abbr>s</a></li>
@@ -121,7 +121,7 @@
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>place</var> 7))
-  (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">1+</code> <var>place</var>))
+  (<code class="relevant">modify</code> (<code class="relevant marker">1+</code> <var>place</var>))
   <var>place</var>)
 ==
 (let ((<var>place</var> 7))
@@ -132,7 +132,7 @@
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>place</var> '(old)))
-  (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">cons</code> 'new <var>place</var>))
+  (<code class="relevant">modify</code> (<code class="relevant marker">cons</code> 'new <var>place</var>))
   <var>place</var>)
 ==
 (let ((<var>place</var> '(old)))
@@ -144,7 +144,7 @@
         <div class="scroll">
           <pre class="example"><code class="common-lisp">;; Reminder for newbies: string-equal is case-insensitive comparison.
 (let ((<var>place</var> '(<code class="string">"hello"</code> <code class="string">"hi"</code>)))
-  (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">adjoin</code> <code class="string">"HELLO"</code> <var>place</var> :test #'string-equal))
+  (<code class="relevant">modify</code> (<code class="relevant marker">adjoin</code> <code class="string">"HELLO"</code> <var>place</var> :test #'string-equal))
   <var>place</var>)
 ==
 (let ((<var>place</var> '(<code class="string">"hello"</code> <code class="string">"hi"</code>)))
@@ -167,12 +167,12 @@
           </span>
         </h1>
 
-        <p>Not very exciting so far. But <code class="common-lisp standard macro operator">incf</code>, <code>push</code> and <code>pushnew</code> give you access to 3 modify-macros, whereas <code class="common-lisp library macro operator">modify</code> gives you access to literally <em>hundreds</em>!</p>
+        <p>Not very exciting so far. But <code>incf</code>, <code>push</code> and <code>pushnew</code> give you access to 3 modify-macros, whereas <code class="relevant">modify</code> gives you access to literally <em>hundreds</em>!</p>
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">;; Traditionally "nreversef"
 (let ((<var>place</var> (list 1 2 3)))
-  (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">nreverse</code> <var>place</var>))
+  (<code class="relevant">modify</code> (<code class="relevant marker">nreverse</code> <var>place</var>))
   <var>place</var>)
 =&gt; (3 2 1)</code></pre>
         </div>
@@ -180,7 +180,7 @@
         <div class="scroll">
           <pre class="example"><code class="common-lisp">;; "string-upcasef"?...
 (let ((<var>place</var> <code class="string">"Yay"</code>))
-  (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">string-upcase</code> <var>place</var>))
+  (<code class="relevant">modify</code> (<code class="relevant marker">string-upcase</code> <var>place</var>))
   <var>place</var>)
 =&gt; <code class="string">"YAY"</code></code></pre>
         </div>
@@ -188,7 +188,7 @@
         <div class="scroll">
           <pre class="example"><code class="common-lisp">;; "listf"?
 (let ((<var>place</var> 'atom))
-  (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">list</code> <var>place</var>))
+  (<code class="relevant">modify</code> (<code class="relevant marker">list</code> <var>place</var>))
   <var>place</var>)
 =&gt; (ATOM)</code></pre>
         </div>
@@ -196,7 +196,7 @@
         <div class="scroll">
           <pre class="example"><code class="common-lisp">;; "class-off"?
 (let ((<var>place</var> 'symbol))
-  (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">class-of</code> <var>place</var>))
+  (<code class="relevant">modify</code> (<code class="relevant marker">class-of</code> <var>place</var>))
   <var>place</var>)
 =&gt; #&lt;BUILT-IN-CLASS SYMBOL&gt;</code></pre>
         </div>
@@ -204,7 +204,7 @@
         <div class="scroll">
           <pre class="example"><code class="common-lisp">;; "parse-integerf"?
 (let ((<var>place</var> <code class="string">"1986"</code>))
-  (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">parse-integer</code> <var>place</var>))
+  (<code class="relevant">modify</code> (<code class="relevant marker">parse-integer</code> <var>place</var>))
   <var>place</var>)
 =&gt; 1986</code></pre>
         </div>
@@ -231,7 +231,7 @@
   <var>place</var>)
 ;; instead of
 (let ((<var>place</var> (list 1 2 3)))
-  (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">nreverse</code> <var>place</var>))
+  (<code class="relevant">modify</code> (<code class="relevant marker">nreverse</code> <var>place</var>))
   <var>place</var>)</code></pre>
         </div>
 
@@ -239,7 +239,7 @@
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>my-list-of-three-elements</var> (list 1 2 3)))
-  (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">nreverse</code> <var>my-list-of-three-elements</var>))
+  (<code class="relevant">modify</code> (<code class="relevant marker">nreverse</code> <var>my-list-of-three-elements</var>))
   <var>my-list-of-three-elements</var>)
 ==
 (let ((<var>my-list-of-three-elements</var> (list 1 2 3)))
@@ -250,7 +250,7 @@
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>hash</var> (make-hash-table)))
   (setf (gethash 'key <var>hash</var>) 10)
-  (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">/</code> (gethash (print 'key) <var>hash</var>) 5))
+  (<code class="relevant">modify</code> (<code class="relevant marker">/</code> (gethash (print 'key) <var>hash</var>) 5))
   (gethash 'key <var>hash</var>))
 ==
 (let ((<var>hash</var> (make-hash-table)))
@@ -272,15 +272,15 @@
           </span>
           <span class="breadcrumbs">
             <a href="#">place-modifiers</a>
-            <span class="crumb"><span class="s"> » </span><a class="here"><code class="common-lisp library macro operator">modify</code> return values, <code class="common-lisp library marker">:old</code></a></span>
+            <span class="crumb"><span class="s"> » </span><a class="here"><code class="relevant">modify</code> return values, <code class="relevant marker">:old</code></a></span>
           </span>
         </h1>
 
-        <p><code class="common-lisp library macro operator">modify</code> normally returns the new value(s) of the place, per the usual conventions:</p>
+        <p><code class="relevant">modify</code> normally returns the new value(s) of the place, per the usual conventions:</p>
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>place</var> 2))
-  (values (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">expt</code> <var>place</var> 8))
+  (values (<code class="relevant">modify</code> (<code class="relevant marker">expt</code> <var>place</var> 8))
           <var>place</var>))
 =&gt; 256, 256</code></pre>
         </div>
@@ -289,7 +289,7 @@
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>place</var> 2))
-  (values (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">:old</code> (<code class="common-lisp library marker">expt</code> <var>place</var> 8)))
+  (values (<code class="relevant">modify</code> (<code class="relevant marker">:old</code> (<code class="relevant marker">expt</code> <var>place</var> 8)))
           <var>place</var>))
 =&gt; 2, 256</code></pre>
         </div>
@@ -312,16 +312,16 @@
           <ul>
             <li><a href="#conservative-recursion-through-spots">Conservative recursion through "spots"</a></li>
             <li><a href="#inconceivable-places">Inconceivable places</a></li>
-            <li><a href="#explicit-place">Speculative recursion through "spots" (<code class="common-lisp library marker">:place</code>)</a></li>
+            <li><a href="#explicit-place">Speculative recursion through "spots" (<code class="relevant marker">:place</code>)</a></li>
             <li><a href="#top-level">Possible place at top-level: treated as <abbr title="place-modification-expression">PME</abbr></a></li>
           </ul>
         </nav>
 
-        <p>Some place-modifiers are also valid places. One example is <code>aref</code>. In the following example, how does <code class="common-lisp library macro operator">modify</code> know which of <code class="common-lisp">(aref <var>object</var> 0)</code> or <var>object</var> should be interpreted as being the place to modify?</p>
+        <p>Some place-modifiers are also valid places. One example is <code>aref</code>. In the following example, how does <code class="relevant">modify</code> know which of <code class="common-lisp">(aref <var>object</var> 0)</code> or <var>object</var> should be interpreted as being the place to modify?</p>
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>object</var> (vector 'e)))
-  (values (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">:old</code> (<code class="common-lisp library marker">list</code> (aref <var>object</var> 0))))
+  (values (<code class="relevant">modify</code> (<code class="relevant marker">:old</code> (<code class="relevant marker">list</code> (aref <var>object</var> 0))))
           <var>object</var>))
 =&gt; E, #((E))
 or #(E), (E) ?</code></pre>
@@ -340,7 +340,7 @@ or #(E), (E) ?</code></pre>
             </span>
           </h1>
 
-          <p>It's simple: <code class="common-lisp library macro operator">modify</code> is "conservative" by default, so as soon as it encounters a possible place while recursing through the "spots" (described and explained below), then it will treat that as the place. This is the most intuitive possible default and is usually what you want.</p>
+          <p>It's simple: <code class="relevant">modify</code> is "conservative" by default, so as soon as it encounters a possible place while recursing through the "spots" (described and explained below), then it will treat that as the place. This is the most intuitive possible default and is usually what you want.</p>
 
           <p>In the above example, <code class="common-lisp">(aref <var>object</var> 0)</code> is the place to modify, not <var>object</var>.</p>
 
@@ -359,11 +359,11 @@ or #(E), (E) ?</code></pre>
           </span>
         </h1>
 
-        <p>Some place-modifiers are known to <code class="common-lisp library macro operator">modify</code> as being "inconceivable places", which allows conservative recursion to proceed (at least) one step further, much conveniently:</p>
+        <p>Some place-modifiers are known to <code class="relevant">modify</code> as being "inconceivable places", which allows conservative recursion to proceed (at least) one step further, much conveniently:</p>
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>list</var> '((d . 4))))
-  (values (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">:old</code> (<code class="common-lisp library marker">cons</code> 'first (<code class="common-lisp library marker">list*</code> 'a 1 'b 2 (<code class="common-lisp library marker">acons</code> 'c 3 <var>list</var>)))))
+  (values (<code class="relevant">modify</code> (<code class="relevant marker">:old</code> (<code class="relevant marker">cons</code> 'first (<code class="relevant marker">list*</code> 'a 1 'b 2 (<code class="relevant marker">acons</code> 'c 3 <var>list</var>)))))
           <var>list</var>))
 =&gt; ((D . 4)), (FIRST A 1 B 2 (C . 3) (D . 4))</code></pre>
         </div>
@@ -379,15 +379,15 @@ or #(E), (E) ?</code></pre>
           <span class="breadcrumbs">
             <a href="#">place-modifiers</a>
             <span class="crumb"><span class="s"> » </span><a href="#place-modification-expression-vs-place"><abbr title="place-modification-expression">PME</abbr> VS place</a></span>
-            <span class="crumb"><span class="s"> » </span><a class="here">Speculative recursion through "spots" (<code class="common-lisp library marker">:place</code>)</a></span>
+            <span class="crumb"><span class="s"> » </span><a class="here">Speculative recursion through "spots" (<code class="relevant marker">:place</code>)</a></span>
           </span>
         </h1>
 
-        <p>After finding the <a href="#conservative-recursion-through-spots">most conservative place</a>, <code class="common-lisp library macro operator">modify</code> will still speculatively recurse through the remaining "spots" in search of a <code class="common-lisp library marker">:place</code> "local special form", which would explicitly indicate at what level lies the intended place, overriding the conservative behavior.</p>
+        <p>After finding the <a href="#conservative-recursion-through-spots">most conservative place</a>, <code class="relevant">modify</code> will still speculatively recurse through the remaining "spots" in search of a <code class="relevant marker">:place</code> "local special form", which would explicitly indicate at what level lies the intended place, overriding the conservative behavior.</p>
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>object</var> (vector 'e)))
-  (values (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">:old</code> (<code class="common-lisp library marker">list</code> (<code class="common-lisp library marker">aref</code> (<code class="common-lisp library marker">:place</code> <var>object</var>) 0))))
+  (values (<code class="relevant">modify</code> (<code class="relevant marker">:old</code> (<code class="relevant marker">list</code> (<code class="relevant marker">aref</code> (<code class="relevant marker">:place</code> <var>object</var>) 0))))
           <var>object</var>))
 =&gt; #(E), (E)</code></pre>
         </div>
@@ -407,11 +407,11 @@ or #(E), (E) ?</code></pre>
           </span>
         </h1>
 
-        <p>Of course, the "top-level" (ignoring <code class="common-lisp library marker">:old</code>) of <code class="common-lisp library macro operator">modify</code> can only accept a <abbr title="place-modification-expression">PME</abbr> and not a place, so there can be no ambiguity there:</p>
+        <p>Of course, the "top-level" (ignoring <code class="relevant marker">:old</code>) of <code class="relevant">modify</code> can only accept a <abbr title="place-modification-expression">PME</abbr> and not a place, so there can be no ambiguity there:</p>
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>object</var> (vector 'e)))
-  (values (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">:old</code> (<code class="common-lisp library marker">aref</code> (<code class="common-lisp library marker">:place</code> <var>object</var>) 0)))
+  (values (<code class="relevant">modify</code> (<code class="relevant marker">:old</code> (<code class="relevant marker">aref</code> (<code class="relevant marker">:place</code> <var>object</var>) 0)))
           <var>object</var>))
 =&gt; #(E), E</code></pre>
         </div>
@@ -428,22 +428,22 @@ or #(E), (E) ?</code></pre>
           </span>
           <span class="breadcrumbs">
             <a href="#">place-modifiers</a>
-            <span class="crumb"><span class="s"> » </span><a class="here">Multiple <abbr title="place-modification-expression">PME</abbr>s: <code class="common-lisp standard macro operator">setf</code>-like</a></span>
+            <span class="crumb"><span class="s"> » </span><a class="here">Multiple <abbr title="place-modification-expression">PME</abbr>s: <code>setf</code>-like</a></span>
           </span>
         </h1>
 
-        <p><code class="common-lisp library macro operator">modify</code> can accept multiple <abbr title="place-modification-expression">PME</abbr>s, in which case the modifications will happen in sequence, much in the same way as <code class="common-lisp standard macro operator">setf</code> with multiple places.</p>
+        <p><code class="relevant">modify</code> can accept multiple <abbr title="place-modification-expression">PME</abbr>s, in which case the modifications will happen in sequence, much in the same way as <code>setf</code> with multiple places.</p>
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>x</var> 'a) (<var>y</var> 'b))
-  (values (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">list</code> <var>x</var>)
-                  (<code class="common-lisp library marker">:old</code> (<code class="common-lisp library marker">cons</code> <var>y</var> <var>x</var>)))
+  (values (<code class="relevant">modify</code> (<code class="relevant marker">list</code> <var>x</var>)
+                  (<code class="relevant marker">:old</code> (<code class="relevant marker">cons</code> <var>y</var> <var>x</var>)))
           <var>x</var>
           <var>y</var>))
 ==
 (let ((<var>x</var> 'a) (<var>y</var> 'b))
-  (values (progn (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">list</code> <var>x</var>))
-                 (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">:old</code> (<code class="common-lisp library marker">cons</code> <var>y</var> <var>x</var>))))
+  (values (progn (<code class="relevant">modify</code> (<code class="relevant marker">list</code> <var>x</var>))
+                 (<code class="relevant">modify</code> (<code class="relevant marker">:old</code> (<code class="relevant marker">cons</code> <var>y</var> <var>x</var>))))
           <var>x</var>
           <var>y</var>))
 =&gt; (A), (B A), B</code></pre>
@@ -483,11 +483,11 @@ or #(E), (E) ?</code></pre>
 
         <div class="scroll">
           <pre class="example"><code class="common-lisp">(let ((<var>variant-counts</var> (vector 0 0 0 0)))
-  (<code class="common-lisp library function operator">place-modifiers:map-infos</code>
+  (<code class="relevant">place-modifiers:map-infos</code>
    (lambda (<var>name</var> <var>info</var>)
      (declare (ignore <var>name</var>))
-     (<code class="common-lisp library macro operator">modify</code> (<code class="common-lisp library marker">1+</code> (aref <var>variant-counts</var>
-                       (1- (length (<code class="common-lisp library function operator">place-modifiers:spot-indexes</code> <var>info</var>))))))))
+     (<code class="relevant">modify</code> (<code class="relevant marker">1+</code> (aref <var>variant-counts</var>
+                       (1- (length (<code class="relevant">place-modifiers:spot-indexes</code> <var>info</var>))))))))
   <var>variant-counts</var>)
 =&gt; #(301 172 35 2)</code></pre>
         </div>
