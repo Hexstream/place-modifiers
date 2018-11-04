@@ -65,9 +65,9 @@
     (list
      (destructuring-bind (pm-name &rest args) pme-or-place
        (declare (ignore args))
-       (let ((pm-info (and pm-name (place-modifier:locate pm-name :errorp nil))))
+       (let ((pm-info (and pm-name (defsys:locate 'modify pm-name :errorp nil))))
          (if pm-info
-             (funcall (if (place-modifier:inconceivable-place-p pm-info)
+             (funcall (if (inconceivable-place-p pm-info)
                           on-pme
                           on-ambiguous)
                       pme-or-place)
@@ -103,7 +103,7 @@
                                                                before-spot
                                                                after-spot))))
                                 (rest pme))
-                    (default-spot-index (place-modifier:locate operator))))))
+                    (default-spot-index (defsys:locate 'modify operator))))))
 
 (defun %make-speculative-walk-handler (function template)
   (lambda (ambiguous)

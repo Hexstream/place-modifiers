@@ -7,12 +7,13 @@
 
   :description "Essentially gives access to hundreds of modify-macros through one single macro: MODIFY."
 
-  :depends-on (#:map-bind)
+  :depends-on ("definitions-systems"
+               "map-bind")
 
   :version "3.0"
   :serial cl:t
   :components ((:file "package")
-               (:file "info")
+               (:file "defsys")
                (:file "main")
                (:file "definitions"))
 

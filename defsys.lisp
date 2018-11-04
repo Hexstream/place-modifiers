@@ -1,20 +1,24 @@
 (in-package #:place-modifiers)
 
-(defvar *infos* (make-hash-table :test 'eq))
-(defparameter place-modifier:*spot-index-format* :human)
+(defclass definitions-system (defsys:standard-system)
+  ())
 
-(defun map-infos (function)
-  (maphash function *infos*))
+(defvar *definitions* (make-instance 'definitions-system))
 
-(defgeneric place-modifier:names (object))
-(defgeneric place-modifier:inconceivable-place-p (object))
-(defgeneric place-modifier:default-spot-index (info &key))
+(setf (defsys:locate (defsys:root-system) 'modify)
+      *definitions*)
 
-(defclass place-modifier:info () ())
+(defparameter *spot-index-format* :human)
 
-(defclass place-modifier:standard-info (place-modifier:info)
+(defgeneric names (object))
+(defgeneric inconceivable-place-p (object))
+(defgeneric default-spot-index (definition &key))
+
+(defclass definition () ())
+
+(defclass standard-definition (definition)
   ((%names :initarg :names
-           :reader place-modifier:names
+           :reader names
            :type list)
    (%inconceivable-place-p :initarg :inconceivable-place-p
                            :reader inconceivable-place-p
@@ -22,7 +26,7 @@
    (%default-spot-index :initarg :default-spot-index
                         :type fixnum)))
 
-(defun place-modifier:convert-spot-index (spot-index source-format destination-format)
+(defun convert-spot-index (spot-index source-format destination-format)
   (check-type source-format (member :machine :human))
   (check-type destination-format (member :machine :human :preserve))
   (when (eq destination-format :preserve)
@@ -44,61 +48,54 @@
               (1 (1- spot-index)))))))
    spot-index))
 
-(defmethod place-modifier:default-spot-index ((info place-modifier:standard-info) &key (format :machine))
-  (place-modifier:convert-spot-index (slot-value info '%default-spot-index)
+(defmethod default-spot-index ((definition standard-definition) &key (format :machine))
+  (convert-spot-index (slot-value definition '%default-spot-index)
                                      :machine
                                      format))
 
-(defmethod initialize-instance :around ((info place-modifier:standard-info)
+(defmethod initialize-instance :around ((definition standard-definition)
                                         &key names
                                         inconceivable-place-p
                                         default-spot-index
                                         spot-index-format)
   (call-next-method
-   info
+   definition
    :names names
    :inconceivable-place-p inconceivable-place-p
    :default-spot-index (convert-spot-index default-spot-index spot-index-format :machine)))
 
-(defmethod print-object ((info place-modifier:standard-info) stream)
-  (print-unreadable-object (info stream :type t)
-    (let ((format place-modifier:*spot-index-format*))
+(defmethod print-object ((definition standard-definition) stream)
+  (print-unreadable-object (definition stream :type t)
+    (let ((format *spot-index-format*))
       (format stream "~W ~C~W ~W"
-              (place-modifier:names info)
+              (names definition)
               (ecase format
                 (:human #\h)
                 (:machine #\m))
-              (place-modifier:default-spot-index info :format format)
-              (if (place-modifier:inconceivable-place-p info)
+              (default-spot-index definition :format format)
+              (if (inconceivable-place-p definition)
                   :inconceivable-place
                   :possible-place)))))
 
-(defun place-modifier:locate (name &key (errorp t))
-  (check-type name (and symbol (not null)))
-  (or (gethash name *infos*)
-      (when errorp
-	(error "There is no place-modifier named ~S." name))))
-
-(defun place-modifier:ensure (names inconceivable-place-p
-                              &key (default-spot-index 0) (spot-index-format :machine))
+(defun %ensure (names inconceivable-place-p
+                &key (default-spot-index 0) (spot-index-format :machine))
   (setf names (etypecase names
                 (list names)
                 (symbol (list names))))
-  (let ((new (make-instance 'place-modifier:standard-info
+  (let ((new (make-instance 'standard-definition
                             :names names
                             :inconceivable-place-p inconceivable-place-p
                             :default-spot-index default-spot-index
                             :spot-index-format spot-index-format)))
     (map-bind (mapcar) ((name names))
-      (setf (gethash name *infos*) new))))
+      (setf (defsys:locate *definitions* name) new))))
 
-(defmacro place-modifier:define ((&key (spot-index-format :human))
-                                 &body definitions)
+(defmacro define ((&key (spot-index-format :human)) &body definitions)
   `(progn
      ,@(map-bind (mapcar) ((definition definitions))
-         (destructuring-bind (names inconceivable-place-p
-                                    &optional (default-spot-index 1))
-             definition
-           `(place-modifier:ensure ',names ,inconceivable-place-p
-                                   :default-spot-index ',default-spot-index
-                                   :spot-index-format ,spot-index-format)))))
+                 (destructuring-bind (names inconceivable-place-p
+                                            &optional (default-spot-index 1))
+                     definition
+                   `(%ensure ',names ,inconceivable-place-p
+                             :default-spot-index ',default-spot-index
+                             :spot-index-format ,spot-index-format)))))
