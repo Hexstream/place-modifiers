@@ -87,15 +87,17 @@
                             :inconceivable-place-p inconceivable-place-p
                             :default-spot-index default-spot-index
                             :spot-index-format spot-index-format)))
-    (map-bind (mapcar) ((name names))
-      (setf (defsys:locate *definitions* name) new))))
+    (mapcar (lambda (name)
+              (setf (defsys:locate *definitions* name) new))
+            names)))
 
 (defmacro define ((&key (spot-index-format :human)) &body definitions)
   `(progn
-     ,@(map-bind (mapcar) ((definition definitions))
-                 (destructuring-bind (names inconceivable-place-p
-                                            &optional (default-spot-index 1))
-                     definition
-                   `(%ensure ',names ,inconceivable-place-p
-                             :default-spot-index ',default-spot-index
-                             :spot-index-format ,spot-index-format)))))
+     (mapcar (lambda (definition)
+               (destructuring-bind (names inconceivable-place-p
+                                    &optional (default-spot-index 1))
+                   definition
+                 `(%ensure ',names ,inconceivable-place-p
+                           :default-spot-index ',default-spot-index
+                           :spot-index-format ,spot-index-format)))
+             definitions)))

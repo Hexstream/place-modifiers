@@ -162,5 +162,6 @@
 
 (defmacro modify (&rest place-modification-expressions &environment env)
   `(progn
-     ,@(map-bind (mapcar) ((expression place-modification-expressions))
-         (%expand expression env))))
+     ,@(mapcar (lambda (expression)
+                 (%expand expression env))
+               place-modification-expressions)))

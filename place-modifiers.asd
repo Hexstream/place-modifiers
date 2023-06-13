@@ -7,8 +7,7 @@
 
   :description "Essentially gives access to hundreds of modify-macros through one single macro: MODIFY."
 
-  :depends-on ("definitions-systems"
-               "map-bind")
+  :depends-on ("definitions-systems")
 
   :version "3.0"
   :serial cl:t
